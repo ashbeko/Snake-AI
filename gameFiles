@@ -1,3 +1,6 @@
+""" This code would be for a game of snake in which it accepts user input (player can control the snake). This was not the goal. 
+This code provided by GeekforGeeks was used as a baseline for initializing the game and creating the GUI window"""
+
 # importing libraries
 import pygame
 import time
