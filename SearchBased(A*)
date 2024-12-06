@@ -1,0 +1,141 @@
+import pygame
+import random
+import time
+import heapq
+from collections import deque
+
+"""Snake movement"""
+DIRECTIONS = {'UP': (-1, 0), 'DOWN': (1, 0), 'LEFT': (0, -1), 'RIGHT': (0, 1)}
+
+class SnakeGame:
+    def __init__(self, grid_size, start_snake):
+        self.grid_size = grid_size
+        self.snake = deque(start_snake)
+        self.snake_set = set(start_snake)
+        self.food = self.generate_food()
+        self.running = True
+        self.score = 0
+
+    def is_valid_position(self, position):
+        row, col = position
+        return 0 <= row < self.grid_size and 0 <= col < self.grid_size
+
+    def generate_food(self):
+        all_positions = {(r, c) for r in range(self.grid_size) for c in range(self.grid_size)}
+        empty_positions = list(all_positions - self.snake_set)
+        return random.choice(empty_positions) if empty_positions else None
+
+    def move_snake(self, new_head):
+        if new_head == self.food:
+            self.snake.appendleft(new_head)
+            self.snake_set.add(new_head)
+            self.food = self.generate_food()
+            self.score += 10
+            return True
+        else:
+
+            tail = self.snake.pop()
+            self.snake_set.remove(tail)
+            if new_head in self.snake_set or not self.is_valid_position(new_head):
+                self.running = False  # Game over if the snake collides
+                return False
+            self.snake.appendleft(new_head)
+            self.snake_set.add(new_head)
+            return False
+
+    def is_game_won(self):
+
+        return len(self.snake) == self.grid_size * self.grid_size
+
+
+def heuristic(a, b):
+    """Manhattan distance for A*"""
+    return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+def find_path(game):
+    """A* search for the shortest path to the food."""
+    start = game.snake[0]
+    goal = game.food
+    open_set = []
+    heapq.heappush(open_set, (0, start, [start]))
+    visited = set()
+
+    while open_set:
+        cost, current, path = heapq.heappop(open_set)
+        if current in visited:
+            continue
+        visited.add(current)
+
+        if current == goal:
+            return path
+
+        for direction in DIRECTIONS.values():
+            neighbor = (current[0] + direction[0], current[1] + direction[1])
+            if neighbor not in visited and game.is_valid_position(neighbor):
+                if neighbor not in game.snake_set:
+                    new_cost = cost + 1 + heuristic(neighbor, goal)
+                    heapq.heappush(open_set, (new_cost, neighbor, path + [neighbor]))
+
+    return None
+
+
+def main():
+    pygame.init()
+    grid_size = 20
+    cell_size = 25
+    screen_size = grid_size * cell_size
+    screen = pygame.display.set_mode((screen_size, screen_size))
+    clock = pygame.time.Clock()
+
+    font = pygame.font.SysFont("Arial", 20)
+    BLACK = (0, 0, 0)
+    WHITE = (255, 255, 255)
+    GREEN = (0, 255, 0)
+    RED = (255, 0, 0)
+    start_snake = [(10, 10), (10, 9), (10, 8)]
+    game = SnakeGame(grid_size, start_snake)
+
+    while game.running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                game.running = False
+
+        if game.is_game_won():
+            print("Congratulations! You won the game!")
+            time.sleep(2)
+            break
+
+        path = find_path(game)
+
+        if path and len(path) > 1:
+            next_move = path[1]
+            game.move_snake(next_move)
+        else:
+            game.running = False
+
+        screen.fill(BLACK)
+        for row in range(grid_size):
+            for col in range(grid_size):
+                rect = pygame.Rect(col * cell_size, row * cell_size, cell_size, cell_size)
+                pygame.draw.rect(screen, WHITE, rect, 1)
+
+        for segment in game.snake:
+            rect = pygame.Rect(segment[1] * cell_size, segment[0] * cell_size, cell_size, cell_size)
+            pygame.draw.rect(screen, GREEN, rect)
+
+        if game.food:
+            rect = pygame.Rect(game.food[1] * cell_size, game.food[0] * cell_size, cell_size, cell_size)
+            pygame.draw.rect(screen, RED, rect)
+
+        score_text = font.render(f"Score: {game.score}", True, WHITE)
+        screen.blit(score_text, (10, 10))
+
+        pygame.display.flip()
+        clock.tick(10)
+
+    print("Game Over!")
+    print(f"Final Score: {game.score}")
+    pygame.quit()
+
+if __name__ == "__main__":
+    main()
