@@ -1,0 +1,189 @@
+import pygame
+import random
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from collections import deque
+
+GRID_SIZE = 10
+CELL_SIZE = 40
+STATE_SIZE = GRID_SIZE * GRID_SIZE
+ACTION_SPACE = 4
+GAMMA = 0.9
+EPSILON_DECAY = 0.995
+MIN_EPSILON = 0.01
+BATCH_SIZE = 64
+MEMORY_SIZE = 10000
+LEARNING_RATE = 0.01
+EPISODES = 500
+
+
+DIRECTIONS = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+
+
+class SnakeEnv:
+    def __init__(self):
+        self.grid_size = GRID_SIZE
+        self.reset()
+
+    def reset(self):
+        self.snake = deque([(self.grid_size // 2, self.grid_size // 2)])
+        self.food = self._generate_food()
+        self.direction = 0  
+        self.done = False
+        return self._get_state()
+
+    def _generate_food(self):
+        while True:
+            food = (random.randint(0, self.grid_size - 1), random.randint(0, self.grid_size - 1))
+            if food not in self.snake:
+                return food
+
+    def _get_state(self):
+        grid = np.zeros((self.grid_size, self.grid_size))
+        for r, c in self.snake:
+            grid[r, c] = 1
+        grid[self.food[0], self.food[1]] = 2
+        return grid.flatten()
+
+    def step(self, action):
+        if self.done:
+            return self._get_state(), 0, True
+
+        dx, dy = DIRECTIONS[action]
+        head_x, head_y = self.snake[0]
+        new_head = (head_x + dx, head_y + dy)
+
+        if (not 0 <= new_head[0] < self.grid_size or
+                not 0 <= new_head[1] < self.grid_size or
+                new_head in self.snake):
+            self.done = True
+            return self._get_state(), -1, True
+
+        self.snake.appendleft(new_head)
+        if new_head == self.food:
+            reward = 1  # Eat food
+            self.food = self._generate_food()
+        else:
+            self.snake.pop()
+            reward = 0.1
+
+        return self._get_state(), reward, False
+
+"""Q-Network"""
+class DQN(nn.Module):
+    def __init__(self, state_size, action_size):
+        super(DQN, self).__init__()
+        self.fc1 = nn.Linear(state_size, 128)
+        self.fc2 = nn.Linear(128, 128)
+        self.fc3 = nn.Linear(128, action_size)
+
+    def forward(self, x):
+        x = torch.relu(self.fc1(x))
+        x = torch.relu(self.fc2(x))
+        return self.fc3(x)
+
+"""Memory"""
+class ReplayMemory:
+    def __init__(self, capacity):
+        self.memory = deque(maxlen=capacity)
+
+    def push(self, state, action, reward, next_state, done):
+        self.memory.append((state, action, reward, next_state, done))
+
+    def sample(self, batch_size):
+        return random.sample(self.memory, batch_size)
+
+    def __len__(self):
+        return len(self.memory)
+
+class Agent:
+    def __init__(self):
+        self.policy_net = DQN(STATE_SIZE, ACTION_SPACE)
+        self.target_net = DQN(STATE_SIZE, ACTION_SPACE)
+        self.target_net.load_state_dict(self.policy_net.state_dict())
+        self.target_net.eval()
+
+        self.optimizer = optim.Adam(self.policy_net.parameters(), lr=LEARNING_RATE)
+        self.memory = ReplayMemory(MEMORY_SIZE)
+        self.epsilon = 1.0
+
+    def select_action(self, state):
+        """Epsilon-greedy policy"""
+        if random.random() < self.epsilon:
+            return random.randint(0, ACTION_SPACE - 1)
+        else:
+            state = torch.tensor(np.array(state), dtype=torch.float32).unsqueeze(0)
+            with torch.no_grad():
+                return torch.argmax(self.policy_net(state)).item()
+
+    def train(self):
+        if len(self.memory) < BATCH_SIZE:
+            return
+
+        batch = self.memory.sample(BATCH_SIZE)
+        state, action, reward, next_state, done = zip(*batch)
+        state = torch.tensor(np.array(state), dtype=torch.float32)
+        next_state = torch.tensor(np.array(next_state), dtype=torch.float32)
+        action = torch.tensor(action, dtype=torch.int64).unsqueeze(1)
+        reward = torch.tensor(reward, dtype=torch.float32).unsqueeze(1)
+        done = torch.tensor(done, dtype=torch.float32).unsqueeze(1)
+
+        q_values = self.policy_net(state).gather(1, action)
+        next_q_values = self.target_net(next_state).max(1, keepdim=True)[0].detach()
+        target_q_values = reward + (1 - done) * GAMMA * next_q_values
+
+        loss = nn.MSELoss()(q_values, target_q_values)
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+class SnakeGUI:
+    def __init__(self, env):
+        pygame.init()
+        self.env = env
+        self.screen = pygame.display.set_mode((GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE))
+        self.clock = pygame.time.Clock()
+        self.colors = {"background": (0, 0, 0), "snake": (0, 255, 0), "food": (255, 0, 0)}
+
+    def draw(self):
+        self.screen.fill(self.colors["background"])
+        for x, y in self.env.snake:
+            rect = pygame.Rect(y * CELL_SIZE, x * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+            pygame.draw.rect(self.screen, self.colors["snake"], rect)
+        fx, fy = self.env.food
+        food_rect = pygame.Rect(fy * CELL_SIZE, fx * CELL_SIZE, CELL_SIZE, CELL_SIZE)
+        pygame.draw.rect(self.screen, self.colors["food"], food_rect)
+        pygame.display.flip()
+        self.clock.tick(10)  
+        
+def train_snake_gui():
+    env = SnakeEnv()
+    gui = SnakeGUI(env)
+    agent = Agent()
+
+    for episode in range(EPISODES):
+        state = env.reset()
+        total_reward = 0
+
+        while not env.done:
+            action = agent.select_action(state)
+            next_state, reward, done = env.step(action)
+            agent.memory.push(state, action, reward, next_state, done)
+            agent.train()
+            state = next_state
+            total_reward += reward
+
+            gui.draw()  
+
+        agent.epsilon = max(MIN_EPSILON, agent.epsilon * EPSILON_DECAY)
+        print(f"Episode {episode + 1}, Total Reward: {total_reward}")
+
+        if (episode + 1) % 10 == 0:
+            agent.target_net.load_state_dict(agent.policy_net.state_dict())
+
+    pygame.quit()
+
+if __name__ == "__main__":
+    train_snake_gui()
