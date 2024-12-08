@@ -8,6 +8,9 @@ The Comparison of Search-Based and Reinforcement Learning Agents: The Game of Sn
 Here is a video link to the live demo and explanatation provided by the group members 
 https://youtu.be/VzHTWgLqxGE
 
+Here is the slide presentation used in the demo
+https://unhnewhaven-my.sharepoint.com/:p:/g/personal/abeko1_unh_newhaven_edu/ETlbGGLGoORFpFJNA-OMpk0BdMw4BbDRAe626AwtXynkHQ?e=4LRB7y
+
 Ashley Bekondo
 BS in Cybersecurity and Networks 
 
