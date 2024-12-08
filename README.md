@@ -5,5 +5,8 @@ The Comparison of Search-Based and Reinforcement Learning Agents: The Game of Sn
   It is recommended that anyone using this code have all imported libraries already installed on the IDE to prevent any issues with running the code.
   
 
-Here is a video link to the live demo and explanatation provided by the group memmbers 
+Here is a video link to the live demo and explanatation provided by the group members 
 https://youtu.be/VzHTWgLqxGE
+
+Ashley Bekondo
+BS in Cybersecurity and Networks 
