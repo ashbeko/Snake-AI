@@ -10,3 +10,11 @@ https://youtu.be/VzHTWgLqxGE
 
 Ashley Bekondo
 BS in Cybersecurity and Networks 
+
+WORKS CITED 
+1. https://www.geeksforgeeks.org/ml-reinforcement-learning-algorithm-python-implementation-using-q-learning/
+2. https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
+3. https://www.geeksforgeeks.org/q-learning-in-python/
+4. https://www.geeksforgeeks.org/a-search-algorithm/
+5. https://github.com/Limor-Raviv/Tutorial_Agent_Based_Models/blob/master/Part%202%20-%20A%20Simple%20Agent%20Based%20Model%20in%20Python.ipynb
+6. https://www.geeksforgeeks.org/a-search-algorithm-in-python/
