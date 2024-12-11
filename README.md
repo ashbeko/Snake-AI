@@ -14,7 +14,7 @@ https://unhnewhaven-my.sharepoint.com/:p:/g/personal/abeko1_unh_newhaven_edu/ETl
 Ashley Bekondo
 BS in Cybersecurity and Networks 
 
-WORKS CITED 
+References
 1. https://www.geeksforgeeks.org/ml-reinforcement-learning-algorithm-python-implementation-using-q-learning/
 2. https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
 3. https://www.geeksforgeeks.org/q-learning-in-python/
